@@ -5,10 +5,11 @@ import {
   TYPE_NUMBER,
   TYPE_OBJECT,
   TYPE_STRING,
-} from './constants'
-import { assert } from './assert'
-import { getValueType } from './getValueType'
-import { createBlankSpan, templates } from './template'
+} from "./constants";
+import React from "react";
+import { assert } from "./assert";
+import { getValueType } from "./getValueType";
+import { createBlankSpan, templates } from "./template";
 
 /**
  * Recursively builds a style-able DOM tree of nested spans, based on a JSON value (or key-value pair).
@@ -21,13 +22,19 @@ import { createBlankSpan, templates } from './template'
  * @param keyName The key for this value if it's an object entry, or `false` if it's not
  * @returns The generated DOM tree
  */
+const pp = "asd";
+const SpanBoth = ({ innerText, className }) => (
+  <span className={className}> {innerText} </span>
+);
+const SpanOne = (className) => <span className={className}></span>;
 
-export const buildDom = (value, keyName, document) => {
+export const buildDom = (value, keyName) => {
   // Establish what type this value is
   const type = getValueType(value);
 
   // Create root node for this entry
-  const entry = templates.t_entry.cloneNode(false);
+  const entry = [];
+  //templates.t_entry.cloneElement();
 
   // Establish the size (number of entries) if it's an object or array
   let collectionSize = 0;
@@ -50,29 +57,36 @@ export const buildDom = (value, keyName, document) => {
         break; // no need to keep counting; only need one
       }
     }
-    if (nonZeroSize) entry.appendChild(templates.t_exp.cloneNode(false));
+    //if (nonZeroSize) entry.push(<SpanOne className="e" />);
   }
 
   // If there's a key, add that before the value
   if (keyName !== false) {
     // NB: "" is a legal keyname in JSON
     // This entry must be an object property
-    entry.classList.add("objProp");
+    //entry.classList.add("objProp");
 
     // Create a span for the key name
-    const keySpan = templates.t_key.cloneNode(false);
-    keySpan.textContent = JSON.stringify(keyName).slice(1, -1); // remove quotes
+    const textContent = JSON.stringify(keyName); // remove quotes
+
+    const keySpan = (
+      <SpanBoth
+        innerText={textContent}
+        className={"e text-white text-[13px] font-mono bl"}
+      />
+    );
 
     // Add it to entry, with quote marks
-    entry.appendChild(templates.t_dblqText.cloneNode(false));
-    entry.appendChild(keySpan);
-    entry.appendChild(templates.t_dblqText.cloneNode(false));
+    //entry.push(React.cloneElement(templates.t_dblqText));
+    entry.push(keySpan);
+    console.log("aaaa1 ", entry);
+    //entry.push(React.cloneElement(templates.t_dblqText));
 
     // Also add ":&nbsp;" (colon and non-breaking space)
-    entry.appendChild(templates.t_colonAndSpace.cloneNode(false));
+    entry.push(<span>{":\u00A0"}</span>);
   } else {
     // This is an array element instead
-    entry.classList.add("arrElem");
+    //entry.classList.add("arrElem");
   }
 
   // Generate DOM for this value
@@ -88,32 +102,24 @@ export const buildDom = (value, keyName, document) => {
 
       let escapedString = JSON.stringify(value);
       escapedString = escapedString.substring(1, escapedString.length - 1); // remove outer quotes
-
-      if (
-        value.substring(0, 8) === "https://" ||
-        value.substring(0, 7) === "http://" ||
-        value[0] === "/"
-      ) {
-        const innerStringA = document.createElement("a");
-        innerStringA.href = value;
-        innerStringA.innerText = escapedString;
-        innerStringEl.appendChild(innerStringA);
-      } else {
-        innerStringEl.innerText = escapedString;
-      }
-      const valueElement = templates.t_string.cloneNode(false);
-      valueElement.appendChild(templates.t_dblqText.cloneNode(false));
-      valueElement.appendChild(innerStringEl);
-      valueElement.appendChild(templates.t_dblqText.cloneNode(false));
-      entry.appendChild(valueElement);
+      const valueElement = (
+        <span>
+          <span>&quot;</span>
+          <span className="text-[#12b300] text-[13px] font-mymono">
+            {escapedString}
+          </span>
+          <span>&quot;</span>
+        </span>
+      );
+      entry.push(valueElement);
       break;
     }
 
     case TYPE_NUMBER: {
       // Simply add a number element (span.n)
-      const valueElement = templates.t_number.cloneNode(false);
-      valueElement.innerText = String(value);
-      entry.appendChild(valueElement);
+      const valueElement = <SpanBoth className="n" innerText={String(value)} />;
+      entry.push(valueElement);
+      console.log("aaaa", entry);
       break;
     }
 
@@ -121,14 +127,14 @@ export const buildDom = (value, keyName, document) => {
       assert(typeof value === "object");
 
       // Add opening brace
-      entry.appendChild(templates.t_oBrace.cloneNode(true));
+      entry.push(React.cloneElement(templates.t_oBrace));
 
       // If any properties, add a blockInner containing k/v pair(s)
       if (nonZeroSize) {
         // Add ellipsis (empty, but will be made to do something when entry is collapsed)
-        entry.appendChild(templates.t_ellipsis.cloneNode(false));
+        entry.push(React.cloneElement(templates.t_ellipsis));
         // Create blockInner, which indents (don't attach yet)
-        blockInner = templates.t_blockInner.cloneNode(false);
+        blockInner = [];
         // For each key/value pair, add as a entry to blockInner
 
         let lastComma;
@@ -137,36 +143,37 @@ export const buildDom = (value, keyName, document) => {
             // count++
             // @ts-ignore - TODO
             childEntry = buildDom(value[k], k);
+          
 
             // Add comma (before sizeComment if present, otherwise at end)
-            const comma = templates.t_commaText.cloneNode();
-
-            childEntry.appendChild(comma);
-
-            blockInner.appendChild(childEntry);
-
+            const comma = React.cloneElement(templates.t_commaText);
+            blockInner.push(childEntry);
+            blockInner.push(comma);
             lastComma = comma;
           }
         }
+                 entry.push(
+                   <span className="block pl-8">
+                     <span className="border-l-2 border-indigo-500 block">
+                       {blockInner}
+                     </span>
+                   </span>
+                 );
 
         // Now remove the last comma
         assert(
           // @ts-ignore
           typeof childEntry !== "undefined" && typeof lastComma !== "undefined"
         );
-        childEntry.removeChild(lastComma);
-
-        // Add blockInner
-        entry.appendChild(blockInner);
       }
 
       // Add closing brace
-      entry.appendChild(templates.t_cBrace.cloneNode(true));
+      entry.push(React.cloneElement(templates.t_cBrace));
 
-      // Add data attribute to indicate size
-      entry.dataset.size = ` // ${collectionSize} ${
-        collectionSize === 1 ? "item" : "items"
-      }`;
+      //   // Add data attribute to indicate size @todo: wdswe
+      //   entry.dataset.size = ` // ${collectionSize} ${
+      //     collectionSize === 1 ? "item" : "items"
+      //   }`;
 
       break;
     }
@@ -175,16 +182,13 @@ export const buildDom = (value, keyName, document) => {
       assert(Array.isArray(value));
 
       // Add opening bracket
-      entry.appendChild(templates.t_oBracket.cloneNode(true));
+      entry.push(React.cloneElement(templates.t_oBracket));
 
       // Unless it's empty, add blockInner containing inner vals
       if (nonZeroSize) {
         // Add ellipsis
-        entry.appendChild(templates.t_ellipsis.cloneNode(false));
-
-        // Create blockInner (which indents) (don't attach yet)
-        blockInner = templates.t_blockInner.cloneNode(false);
-
+          entry.push(React.cloneElement(templates.t_ellipsis));
+          blockInner = [];
         // For each key/value pair, add the markup
         for (
           let i = 0, length = value.length, lastIndex = length - 1;
@@ -192,37 +196,40 @@ export const buildDom = (value, keyName, document) => {
           i++
         ) {
           childEntry = buildDom(value[i], false);
-
+            blockInner.push(childEntry);
           // If not last one, add comma
           if (i < lastIndex) {
-            const comma = templates.t_commaText.cloneNode();
-            childEntry.appendChild(comma);
-          }
-
-          blockInner.appendChild(childEntry);
+            const comma = React.cloneElement(templates.t_commaText);
+                blockInner.push(comma)
+          } 
         }
-        // Add blockInner
-        entry.appendChild(blockInner);
+                      entry.push(
+                        <span className="block pl-8">
+                          <span className="border-l-2 border-indigo-500 block">
+                            {blockInner}
+                          </span>
+                        </span>
+                      );
       }
       // Add closing bracket
-      entry.appendChild(templates.t_cBracket.cloneNode(true));
+      entry.push(React.cloneElement(templates.t_cBracket));
 
       // Add data attribute to indicate size
-      entry.dataset.size = ` // ${collectionSize} ${
-        collectionSize === 1 ? "item" : "items"
-      }`;
+      //   entry.dataset.size = ` // ${collectionSize} ${
+      //     collectionSize === 1 ? "item" : "items"
+      //   }`;
 
       break;
     }
 
     case TYPE_BOOL: {
-      if (value) entry.appendChild(templates.t_true.cloneNode(true));
-      else entry.appendChild(templates.t_false.cloneNode(true));
+      if (value) entry.push(templates.t_true.cloneNode(true));
+      else entry.push(templates.t_false.cloneNode(true));
       break;
     }
 
     case TYPE_NULL: {
-      entry.appendChild(templates.t_null.cloneNode(true));
+      entry.push(templates.t_null.cloneNode(true));
       break;
     }
   }

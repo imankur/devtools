@@ -6,17 +6,17 @@ import { SAMPLE } from "../utils/sample";
 export default function PricingPage() {
   //useEffect(() => {
 
-      const res = buildDom(SAMPLE, false);
-      console.log("ankur: ", res, document);
+      const Res = buildDom(SAMPLE, false);
+      console.log("ankur: ", Res);
  // })
 
 
   return (
-    <div>
-      <h1>Pricing</h1>
-      <div dangerouslySetInnerHTML={{ __html: res }}>
+    <div className="pl-5 pt-5">
+      
+        {Res}
 
-      </div>
+      
 
     </div>
   );
